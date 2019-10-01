@@ -1,0 +1,245 @@
+---
+title: "Untitled"
+author: "arroz+"
+date: "11 de Janeiro de 2016"
+output: html_document
+---
+#Grupo B2
+##Ana João Rodrigues Fonseca 2013170494
+##Gonçalo Daniel Tavares Duarte 2013155376
+##Ricardo Jorge Ferreira Margarido 2013145676
+##Contexto:
+###Um investidor da bolsa esporádico teve conhecimento de métodos estatísticos de apoio à decisão. Reuniu uma série de parâmetros que achava pertinentes e que geralmente usava para prever pontos de compra e venda de acções. Os dados foram organizados numa base de dados tendo sido adicionada uma variável dicotómica de compra (0) e venda (1). O investidor procurou posteriormente uma empresa de análise de dados com o intuito de implementar um método de previsão da compra/venda.
+
+##Variáveis:
+###As variáveis são genéricas não sendo facultada nenhuma descrição das mesmas conhecendose apenas o seu nível de mensuração (V1 e V2 - nominal; V3 e V4 - ordinal; V5 e V6 - quantitativa).
+###A última variável (R) na base de dados corresponde aos rótulos para os quais se pretende implementar o modelo estatístico de classificação. A base de dados é simulada.
+```{r}
+library(knitr)
+library(pscl)
+library(survey)
+library(ResourceSelection)
+library(car)
+library(e1071)
+library(rpart)
+setwd("C:\\Users\\Gonçalo Duarte\\Desktop")
+data<-read.csv2("grupo_B2.csv",sep=",", dec=".")
+data=data[complete.cases(data),]
+dataR=data$R
+```
+
+```{r}
+compra <- data[data$R == '0',]  
+venda <- data[data$R == '1',]
+```
+
+##V1
+
+```{r}
+par(mfrow=c(1,2))
+dataR[dataR==0] <- 'Compra'
+dataR[dataR==1] <- 'Venda'
+V1c <- table(compra$V1)/nrow(compra)*100
+V1v <- table(venda$V1)/nrow(venda)*100
+V1compra <- barplot(V1c, col='lightskyblue', main='Compra', xlab='V1', ylab='Frequência relativa(%)', ylim=c(0, 100))
+V1venda <- barplot(V1v, col='lightgreen', main='Venda', xlab='V1', ylab='Frequência relativa(%)', ylim=c(0, 100))
+tablet1 <- table(data$V1,dataR)
+
+kable(tablet1)
+chisq.test(tablet1)
+
+```
+
+V1 p menor que alpha por isso rejeita-se a hipótese nula logo as variáveis não são independentes havendo por isso relação entre ambas.
+
+##V2
+
+```{r}
+par(mfrow=c(1,2))
+dataR[dataR==0] <- 'Compra'
+dataR[dataR==1] <- 'Venda'
+V2c <- table(compra$V2)/nrow(compra)*100
+V2v <- table(venda$V2)/nrow(venda)*100
+V2compra <- barplot(V2c, col='lightskyblue', main='Compra', xlab='V2', ylab='Frequência relativa(%)', ylim=c(0, 100))
+V2venda <- barplot(V2v, col='lightgreen', main='Venda', xlab='V2', ylab='Frequência relativa(%)', ylim=c(0, 100))
+tablet2 <- table(data$V2, dataR)
+kable(tablet2)
+chisq.test(tablet2)
+```
+
+V2 p maior que alpha, nao se rejeita a hipotese nula, as variaveis sao independentes e nao existe relacao entre as mesmas.
+
+##V3
+
+```{r}
+par(mfrow=c(1,2))
+dataR[dataR==0] <- 'Compra'
+dataR[dataR==1] <- 'Venda'
+V3c <- table(compra$V3)/nrow(compra)*100
+V3v <- table(venda$V3)/nrow(venda)*100
+V1compra <- barplot(V3c, col='lightskyblue', main='Compra', xlab='V3', ylab='Frequência relativa(%)', ylim=c(0, 100))
+V1venda <- barplot(V3v, col='lightgreen', main='Venda', xlab='V3', ylab='Frequência relativa(%)', ylim=c(0, 100))
+tablet3 <- table(data$V3, dataR)
+kable(tablet3)
+wilcox.test(V3 ~ R, data=data, paired=FALSE) #PORQUE?
+```
+
+Verifica-se que o valor de p é maior que alpha não se podendo rejeitar a hipótese nula (a diferença das medianas ser 0) concluindo assim que não existe relação entre as variáveis em estudo.
+
+##V4
+
+```{r}
+par(mfrow=c(1,2))
+dataR[dataR==0] <- 'Compra'
+dataR[dataR==1] <- 'Venda'
+V4c <- table(compra$V4)/nrow(compra)*100
+V4v <- table(venda$V4)/nrow(venda)*100
+V1compra <- barplot(V4c, col='lightskyblue', main='Compra', xlab='V4', ylab='Frequência relativa(%)', ylim=c(0, 100))
+V1venda <- barplot(V4v, col='lightgreen', main='Venda', xlab='V4', ylab='Frequência relativa(%)', ylim=c(0, 100))
+tablet4 <- table(data$V4, dataR)
+kable(tablet4)
+wilcox.test(V4 ~ R, data=data, paired=FALSE) #PORQUE?
+```
+
+Verifica-se que o valor de p é maior que alpha não se podendo rejeitar a hipótese nula (a diferença das medianas ser 0) concluindo assim que não existe relação entre as variáveis em estudo.
+
+##V5
+
+```{r}
+boxplot (data$V5 ~ data$R, main='V5 em função de R', xlab='R', names=c('Compra', 'Venda'), ylab='Valores de V5', col=c('lightskyblue', 'lightgreen'))
+V50 <- data$V5[data$R == 0]
+V51 <- data$V5[data$R == 1]
+shapiro.test(V50)
+shapiro.test(V51)
+```
+
+Como p é maior que alpha em ambas as amostras não podemos rejeitar a hipótese nula, logo as amostras seguem uma distribuição normal.
+
+```{r}
+leveneTest(V5~factor(R),data=data)
+```
+
+Uma vez que o valor de p é maior que alpha não se rejeita a hipótese nula, logo as variâncias são iguais.
+
+```{r}
+t.test(V5~R, data = data, var.equal = TRUE, paired = FALSE)
+```
+
+Verifica-se que p é menor que alpha, logo rejeita-se a hipótese nula (as médias das amostras serem iguais), concluindo assim que existe relação entre V5 e R.
+
+##V6
+
+```{r}
+boxplot (data$V6 ~ data$R, main='V6 em função de R', xlab='R', names=c('Compra', 'Venda'), ylab='Valores de V6', col=c('lightskyblue', 'lightgreen'))
+V60 <- data$V6[data$R == 0]
+V61 <- data$V6[data$R == 1]
+shapiro.test(V60)
+shapiro.test(V61)
+```
+
+Uma vez que um dos valores de p é menor que alpha rejeita-se a hipótese nula logo não existe uma distribuição normal das variáveis. Uma vez que as amostras são independentes recorre-se a um teste de Wilcox.
+
+```{r}
+wilcox.test(V6 ~ R, data=data, paired=FALSE)
+```
+
+Verifica-se que o valor de p é menor que alpha rejeitando-se a hipótese nula (a diferença das medianas ser 0) concluindo assim que existe relação entre as variáveis em estudo.
+
+
+## Modelo Logístico
+```{r}
+options(warn=-1)
+ind=1:nrow(data)
+testind=sample(ind,trunc(length(ind)*0.7))
+trainSet=data[testind,]
+testSet=data[-testind,]
+
+logit2=glm(R~V1+V5+V6, data=trainSet, family=binomial(link=logit))
+summary(logit2)
+confint(logit2)
+```
+
+```{r}
+options(warn=-1)
+hoslem.test(logit2$y,fitted(logit2),g=10)
+```
+
+Concluimos então tanto pelo valor de p como pelo facto de 0 estar ou não presente no intervalo de confiança que as variáveis a considerar para a elaboração do nosso modelo devem ser apenas V5 e V6.
+
+```{r}
+options(warn=-1)
+plot(data$V5,data$V6,col=as.factor(data$R),xlab="V5",ylab="V6")
+ind=1:nrow(data)
+testind=sample(ind,trunc(length(ind)*0.7))
+trainSet=data[testind,]
+testSet=data[-testind,]
+
+logit1=glm(R~V5+V6, data=trainSet, family=binomial(link=logit))
+summary(logit1)
+hoslem.test(logit1$y,fitted(logit1),g=10)
+confint(logit1)
+Color = trainSet$R == '0'
+plot(trainSet$V5+trainSet$V6,logit1$fitted.values, col = Color + 2)
+```
+
+```{r}
+logit1_null <- glm(R ~ 1, data=trainSet, family=binomial)
+LL_null <- logLik(logit1_null)
+LL_k <- logLik(logit1)
+R_Cox <- 1 - (exp(LL_null[1])/exp(LL_k[1]))^(2/length(trainSet))
+R_Nag <- R_Cox/(1-(exp(LL_null[1]))^(2/length(trainSet)))
+print(sprintf('R2 Cox = %s',R_Cox))
+print(sprintf('R2 Naguelkerke = %s',R_Nag))
+prob = predict(logit1,type = c('response'),trainSet)
+confusion<-table(prob>0.3,trainSet$R)
+rownames(confusion)[1] <- "Compra"
+rownames(confusion)[2] <- "Venda"
+kable(confusion, caption='Avaliação Treino', col.names=c('Compra','Venda'))
+exatidao1=(confusion[1,1]+confusion[2,2])/70
+exatidao1
+```
+
+```{r}
+logit1_null1 <- glm(R ~ 1, data=testSet, family=binomial)
+LL_null1 <- logLik(logit1_null1)
+LL_k1 <- logLik(logit1)
+R_Cox1 <- 1 - (exp(LL_null1[1])/exp(LL_k1[1]))^(2/length(testSet))
+R_Nag1 <- R_Cox1/(1-(exp(LL_null1[1]))^(2/length(testSet)))
+print(sprintf('R2 Cox = %s',R_Cox1))
+print(sprintf('R2 Naguelkerke = %s',R_Nag1))
+prob = predict(logit1,type = c('response'),testSet)
+confusion2<-table(prob>0.3,testSet$R)
+rownames(confusion2)[1] <- "Compra"
+rownames(confusion2)[2] <- "Venda"
+kable(confusion2, col.names=c('Compra', 'Venda'),caption='Avaliação Teste')
+exatidao=(confusion2[1,1]+confusion2[2,2])/30
+exatidao
+sensibilidade=(confusion2[1,1]/(confusion2[1,1]+confusion2[2,1]))
+sensibilidade
+especificidade=(confusion2[2,2]/(confusion2[1,2]+confusion2[2,2]))
+especificidade
+```
+
+```{r}
+svm1=svm(R ~ V5+V6 , data= trainSet, cost=100 , gamma=0.01 )
+predsvm1= predict(svm1, newdata= trainSet, type=c('response'))
+tablesvm1=table(predsvm1>0.5 , trainSet$R)
+rownames(tablesvm1)[1] <- "Compra"
+rownames(tablesvm1)[2] <- "Venda"
+kable(tablesvm1, caption='Avaliação Treino', col.names=c('Compra', 'Venda'))
+exatidao3=(tablesvm1[1,1]+tablesvm1[2,2])/70
+exatidao3
+predsvm= predict(svm1, newdata=testSet,type=c('response'))
+tablesvm=table(predsvm>0.5 , testSet$R)
+rownames(tablesvm)[1] <- "Compra"
+rownames(tablesvm)[2] <- "Venda"
+kable(tablesvm, caption='Avaliação Teste', col.names=c('Compra', 'Venda'))
+exatidao2=(tablesvm[1,1]+tablesvm[2,2])/30
+exatidao2
+sensibilidade1=(tablesvm[1,1]/(tablesvm[1,1]+tablesvm[2,1]))
+sensibilidade1
+especificidade1=(tablesvm[2,2]/(tablesvm[1,2]+tablesvm[2,2]))
+especificidade1
+plot(trainSet$V5+trainSet$V6, svm1$fitted.values, col = Color + 2)
+```
+
